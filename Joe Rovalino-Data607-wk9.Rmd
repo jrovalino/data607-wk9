@@ -1,0 +1,81 @@
+---
+title: "WeekNineHmwk"
+author: "Joe Rovalino"
+date: "10-26-2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Asignment
+The New York Times web site provides a rich set of APIs, as described here: https://developer.nytimes.com/apis
+You’ll need to start by signing up for an API key.
+Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and
+transform it into an R DataFrame.
+
+```{r}
+# Article http://www.storybench.org/working-with-the-new-york-times-api-in-r/ was excellent source of help and 
+# rpubs used as a model https://rpubs.com/hmgeiger/373949
+
+library(jsonlite)
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+## Set vairables. Will be accessing the NY times search api
+```{r}
+nyapikey <- readLines("nyapi.txt")
+wrdsearch <- "hedge fund blow up"
+bdate <- "20190901"
+edate <- "20191231"
+qurl <- paste0("http://api.nytimes.com/svc/search/v2/articlesearch.json?q=",wrdsearch,
+                  "&begin_date=",bdate,"&end_date=",edate,
+                  "&facet_filter=true&api-key=",nyapikey, sep="")
+qry <- fromJSON(qurl)
+# logic to get total pages to cycle through for 10 articles that come up. 
+maxnum <- round((qry$response$meta$hits[1] / 10)-1) 
+
+# initialize the vector
+recent_articles <- vector("list",length=maxnum)
+# cycle through hits that came back
+for(i in 0:maxnum)
+  {
+    nyhedge <- fromJSON(paste0(qurl, "&page=", i), flatten = TRUE) %>% data.frame() 
+    recent_articles[[i+1]] <- nyhedge 
+    Sys.sleep(8)
+#combines pages into a single data frame
+}
+
+q42019 <- rbind_pages(recent_articles)
+```
+
+```{r}
+#display field names
+colnames(q42019)
+#get rid of junky field prefixes
+#shorten field names
+colnames(q42019) <- str_replace(colnames(q42019),
+                pattern='response\\.',replace='')
+colnames(q42019) <- str_replace(colnames(q42019),
+                pattern='docs\\.',replace='')
+#field list cleaned
+colnames(q42019)
+
+#demonstrate ability to select fields into the data frame. 
+q42019 <- q42019 %>% select("web_url", "snippet","lead_paragraph","abstract")
+q42019
+
+#further logic can be added to disect the columns loaded as data frames. 
+```
